@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CNO Address Book App</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="lib/jqmobile/jquery.mobile.structure.css" />
+        <link rel="stylesheet" href="lib/jqmobile/jquery.mobile.theme.css" />
+        <script src="lib/jq/jquery.js"></script>
+        <script src="lib/jqmobile/jquery.mobile.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                $("#LoginButton").click(function() {
+                    var username = $('#username').val();
+                    var password = $('#password').val();
+                                        
+                    if (username && password) {
+                        window.username = username;
+                        window.password = password;
+                        $.mobile.changePage('#page1');
+                    } else {
+                        $('#NoUserPasswordErrorPopup').popup("open");
+                    }
+                });
+
+                $("#LogoutButton").click(function() {
+                    window.username = "";
+                    window.password = "";
+                    $('#username').val("");
+                    $('#password').val("");
+                    $.mobile.changePage("#LoginPage");
+                });
+
+
+                $('#GetAddressForm').submit(function(event) {
+                    event.preventDefault();
+                    var kronos = $('#kronos').val();
+                    if (kronos) {
+                        if ((kronos > 0) && (kronos < 100000000)) {
+                            console.log(kronos);
+                        } else {
+                            $('#BadKronosErrorPopup').popup("open");
+                        }
+                    } else {
+                        $('#BadKronosErrorPopup').popup("open");
+                    }
+                    return false;
+                });
+                
+                $("#SearchButton").click(function() {
+                    var username = window.username;
+                    var password = window.password;
+                    var id = $('#kronos').val();
+                    
+                    
+
+                    var soapMessage = "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:orac=\"http://oracle.e1.bssv.JP010000/\"><soapenv:Header><wsse:Security soapenv:mustUnderstand=\"0\" xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\" xmlns=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\" xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\"><wsse:UsernameToken><wsse:Username>" + username + "</wsse:Username><wsse:Password Type=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText\">" + password + "</wsse:Password></wsse:UsernameToken></wsse:Security></soapenv:Header><soapenv:Body><orac:getAddressBookElement><orac:entity><orac:entityId>" + id + "</orac:entityId></orac:entity></orac:getAddressBookElement></soapenv:Body></soapenv:Envelope>";
+                    var productServiceUrl = "https://vm-jde-04b5:7002/context-root-JP010000/AddressBookManagerPort";
+
+                    var request = $.ajax({
+                        url: productServiceUrl,
+                        type: "POST",
+                        dataType: "xml",
+                        data: soapMessage,
+                        contentType: "application/soap+xml; charset=UTF-8;action=\"https://vm-jde-04b5:7002/context-root-JP010000/AddressBookManagerPort\""
+                    });
+
+                    request.done(function(msg) {
+                        console.log(msg);
+                        console.log("done");
+                    });
+
+                    request.fail(function(jqXHR, textStatus) {
+                        console.log(jqXHR);
+                        console.log(textStatus);
+                        console.log("fail");
+                    });
+
+                    request.always(function(msg) {
+                        var xml = $(msg);
+                        var i = 0;
+                        
+                        //
+                        // Name
+                        //
+                        var name = "Unknown";
+                        if(xml.find('entityName').text()) {
+                            name = xml.find('entityName').text();
+                        } else {
+                            name = xml.find("description1").text();
+                        }
+
+                        //
+                        // Add to screen
+                        //
+                        $("#NameAlpha").html("<p><h3>" + name + "</h3></p><p><h4>Kronos #: " + id + "</h4></p>");
+
+
+                        //
+                        // Email Addresses
+                        //
+                        var emailList = new Array();
+
+                        xml.find('electronicAddresses').each(function() {
+                            var email = $(this).find('electronicAddress').text();
+                            var ln = $(this).find('electronicAddressLineNumber').text();
+                            emailList[ln] = email;
+                        });
+
+                        var tmp = "<h4>Email:</4><h5>";
+                        for(i=0; i < emailList.length; i++) {
+                            if(emailList[i]) {
+                                //console.log(i + " -> " + emailList[i]);
+                                tmp += "<a href=\"mailto:" +  emailList[i] + "\" data-role=\"button\">" + emailList[i] + "</a><br />";
+                            }
+                        }
+                        tmp += "</h5>"
+                        $("#Email").html(tmp);
+
+                        //
+                        // Phone Numbers
+                        //
+                        var phoneList = new Array();
+
+                        xml.find('phoneNumbers').each(function() {
+                            var areaCode = $.trim($(this).find('areaCode').text());
+                            var phoneNumber = $.trim($(this).find('phoneNumber').text());
+                            var ln = $.trim($(this).find('phoneLineNumber').text());
+
+                            if($.trim(phoneNumber).length === 7) {
+                                var tmp = phoneNumber.slice(0,3) + "-" + phoneNumber.slice(3);
+                                phoneNumber = tmp;
+                            }
+
+                            phoneList[ln] = "(" + areaCode + ") " + phoneNumber;
+                        });
+
+                        tmp = "<h4>Phone:</h4><h5>";
+                        for(i=0; i < phoneList.length; i++) {
+                            if(phoneList[i]) {
+                                //console.log(i + " -> " + phoneList[i]);
+                                tmp += "<a href=\"tel:" + phoneList[i] + "\" data-role=\"button\">" + phoneList[i] + "</a><br />";
+                            }
+                        }
+                        tmp += "</h5>"
+                        $("#Phone").html(tmp);
+
+                        $("#NameAlpha").trigger("create").fadeIn();
+                        $("#Email").trigger("create").fadeIn();
+                        $("#Phone").trigger("create").fadeIn();
+                    });
+
+                    console.log("button clicked");
+                });                
+            });
+        </script>
+    </head>
+    <body>
+        <div data-role="page" id="LoginPage">
+            <div data-role="header">
+                <h1>CNO Address Book</h1>
+            </div>
+            <div data-role="content">
+                <div data-role="fieldcontainer">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" />
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" />
+                    <button data-theme="b" id="LoginButton">Login</button>
+                </div>
+                <div data-role="popup" id="NoUserPasswordErrorPopup" class="ui-content" data-transition="slidedown" data-theme="e" data-overlay-theme="a">
+                    <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+                    <p>You must provide a Username and Password</p>
+                </div>
+            </div>
+        </div>
+        <div data-role="page" id="page1">
+            <div data-role="header">
+                <button data-theme="b" id="LogoutButton">LogOut</button>
+                <h1>CNO Address Book</h1>
+            </div>
+            <div data-role="content">
+                <div data-role="fieldcontainer">
+                    <form id="GetAddressForm">
+                        <label for="kronos">Kronos #</label>
+                        <input type="number" data-clear-btn="false" name="kronos" id="kronos" value="1" />
+                        <button data-theme="b" id="SearchButton">Search</button>
+                    </form>
+                </div>
+                <div id="NameAlpha"></div>
+                <div id="Email"></div>
+                <div id="Phone"></div>
+                <div data-role="popup" id="BadKronosErrorPopup" class="ui-content" data-transition="slidedown" data-theme="e" data-overlay-theme="a">
+                    <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right">Close</a>
+                    <p>Kronos/Address Book numbers are numbers between 1 and 99,999,999</p>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

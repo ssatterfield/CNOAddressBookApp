@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+    <widget xmlns = "http://www.w3.org/ns/widgets"
+        xmlns:gap = "http://phonegap.com/ns/1.0"
+        id        = "com.choctawnation.cnoaddressbookapp"
+        versionCode="10" 
+        version   = "1.0.0">
+
+    <name>CNO Address Book App</name>
+
+    <description>
+        Choctaw Nation of Oklahoma JD Edwards Address Book App 
+    </description>
+
+    <author href="https://choctawnation.com" email="ssatterfield@choctawnation.com">
+        Scott Satterfield
+    </author>
+
+    <access origin="*" />
+</widget>

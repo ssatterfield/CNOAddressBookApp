@@ -19,4 +19,5 @@
     
     <preference name="android-minSdkVersion" value="10" />
     <preference name="android-maxSdkVersion" value="16" />
+    <preference name="splash-screen-duration" value="5000" />
 </widget>
